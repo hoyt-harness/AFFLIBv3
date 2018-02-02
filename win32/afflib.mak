@@ -25,7 +25,7 @@ all:   $(TARGETS)
 
 INCS =	/I.\
 	/Izlib-1.2.3\ \
-	/I..\lib \
+	/I..\include\afflib \
 	/I..\lzma443\C \
 	/I..\lzma443\C\7zip\Compress\LZMA_Alone \
 	/I$(EXPATDIR) \
@@ -38,7 +38,7 @@ CC=cl
 
 # removed: /Gm - enable minimal rebuild; generated internal compiler error
 
-OTHER_FLAGS = /c /nologo /EHsc /RTC1 /RTCs /W2 $(COMPILER_MODE)
+OTHER_FLAGS = /c /nologo /EHsc /W2 $(COMPILER_MODE)
 
 CPPFLAGS=$(INCS) $(DEFS) $(OTHER_FLAGS) /Fp"afflib.pch" /Fo$*.obj
 CFLAGS=$(INCS) $(DEFS) $(OTHER_FLAGS) /Fp"afflib.pch" /Fo$*.obj
@@ -155,7 +155,7 @@ afflib.lib: $(LIB_OBJS)
 WIN32LIBS = ws2_32.lib advapi32.lib c:\openssl\lib\libeay32.lib
 
 clean:
-	del afflib.lib $(LIB_OBJS) $(TARGETS)
+	del afflib.lib $(LIB_OBJS) $(TARGETS) > NUL 2>&1
 
 LINK_OPTS = /libpath:$(SDK_DIR)/Lib /nodefaultlib:libc $(WIN32LIBS)
 

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
         NOTE: AFFLIB is currently maintained at sshock/AFFLIBv3.		     
 		     
 		     
@@ -8,7 +9,15 @@
 			 Simson L. Garfinkel
 		      Naval Postgraduate School
 				 2012
+=======
+		The Advanced Forensic Format
+			Library and Tools
+			Version 3
+>>>>>>> 0ddccaf754ef5b7b903955f382b839dd4a84cee8
 
+	2005-2006 Basis Technology, Inc.
+	2005-2013 Simson L. Garfinkel <simsong@acm.org>
+	2014-2017 Phillip Hellewell <sshock@gmail.com>
 
 The Advanced Forensic Format (AFF) is on-disk format for storing
 computer forensic information. Critical features of AFF include:
@@ -16,7 +25,7 @@ computer forensic information. Critical features of AFF include:
   - AFF allows you to store both computer forensic data and associated
     metadata in one or more files. 
 
-  - AFF allows files to be digital singed, to provide for
+  - AFF allows files to be digital signed, to provide for
     chain-of-custody and long-term file integrity.
 
   - AFF allows for forensic disk images to stored encrypted and
@@ -34,7 +43,6 @@ forensic information. Using these tools you can:
 
    - raw or "dd" 
    - splitraw (in which a single image is split between mulitple files)
-   - EnCase or "E01" format
    - AFF format (in which the entire disk image is stored in a single file.)
    - AFD format (in which a disk image is stored in mulitple AFF files
      stored in a single directory.)

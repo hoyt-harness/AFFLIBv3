@@ -1,5 +1,5 @@
 /*
- * afrecover.cpp
+ * affrecover.cpp
  *
  * Recover broken pages of an AFF file using the party bits
  * This file is a work of a US government employee and as such is in the Public domain.
@@ -23,14 +23,6 @@
 #include <unistd.h>
 #endif
 
-#ifdef HAVE_TERM_H
-#include <term.h>
-#endif
-
-#ifdef HAVE_NCURSES_TERM_H
-#include <ncurses/term.h>
-#endif
-
 #ifdef WIN32
 #include "unix4win32.h"
 #include <malloc.h>
@@ -39,7 +31,7 @@
 using namespace std;
 using namespace aff;
 
-const char *progname = "affix";
+const char *progname = "affrecover";
 
 
 int opt_b = 0;

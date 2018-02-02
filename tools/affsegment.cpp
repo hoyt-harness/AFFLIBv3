@@ -1,5 +1,5 @@
 /*
- * afsegment.cpp
+ * affsegment.cpp
  *
  * segment manipulation tool
  */
@@ -66,7 +66,7 @@ extern "C" {
 using namespace std;
 
 
-const char *progname = "afsegment";
+const char *progname = "affsegment";
 
 int opt_create = 0;
 int opt_quad = 0;
@@ -78,9 +78,9 @@ int opt_x = 0;
 
 void usage()
 {
-    printf("afsegment version %s\n",PACKAGE_VERSION);
+    printf("affsegment version %s\n",PACKAGE_VERSION);
 #ifdef REG_EXTENDED
-    printf("usage: afsegment [options] file1.aff [file2.aff ...]\n");
+    printf("usage: affsegment [options] file1.aff [file2.aff ...]\n");
     printf("options:\n");
     printf("    -c              Create AFF files if they do not exist\n");
     printf("    -ssegval        Sets the value of a segment; may be repeated\n");
@@ -110,7 +110,7 @@ void usage()
     printf("Note: All deletions are done first, then all updates. Don't specify the\n");
     printf("same segment twice on one command line.\n");
 #else
-    printf("afsegment requires a functioning regex package to be installed\n");
+    printf("affsegment requires a functioning regex package to be installed\n");
 #endif    
     exit(0);
 }
@@ -230,19 +230,19 @@ void process(const char *fn)
 		free(buf);
 		continue;
 	    }
-	    if(opt_debug) fprintf(stderr," arg=%"PRIu32" len=%zd\n",arg,len);
+	    if(opt_debug) fprintf(stderr," arg=%" PRIu32 " len=%zd\n",arg,len);
 	    int p = 1;
 	    
 	    if(filecount>1) printf("%s:",fn);
 	    if(print_segs.size()>1) printf("%s=",segname);
 	    if(opt_quad && len==8){
 		uint64_t quad = af_decode_q(buf);
-		printf("%"I64u"\n",quad);
+		printf("%" I64u "\n",quad);
 		p = 0;
 	    }
 	    
 	    if(opt_arg){
-		printf("%"PRIu32"\n",arg);
+		printf("%" PRIu32 "\n",arg);
 		p = 0;
 	    }
 	    

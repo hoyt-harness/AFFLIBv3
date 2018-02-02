@@ -1,5 +1,5 @@
 /*
- * afinfo.cpp:
+ * affinfo.cpp:
  *
  * print information about an aff file
  * Distributed under the Berkeley 4-part license
@@ -33,23 +33,11 @@
 
 using namespace std;
 
-#ifdef HAVE_CURSES_H
-#include <curses.h>
-#endif
-
-#ifdef HAVE_TERM_H
-#include <term.h>
-#endif
-
-#ifdef HAVE_NCURSES_TERM_H
-#include <ncurses/term.h>
-#endif
-
 #ifdef WIN32
 #include "unix4win32.h"
 #endif
 
-const char *progname = "afinfo";
+const char *progname = "affinfo";
 
 #define VALIDATE_MD5  0x01
 #define VALIDATE_SHA1 0x02
@@ -83,46 +71,6 @@ const char *opt_passphrase = 0;
 
 vector<string> opt_seglist;		// just info these segments
 bool something_was_decrypted = false;
-const char *term = 0;
-
-
-/**
- * select bold on or off
- */
-void bold(int on)
-{
-    if(!term) return;
-#ifdef HAVE_ISATTY
-    if(!isatty(fileno(stdout))) return;
-#endif
-#if defined(HAVE_TPUTS)
-    if(on) tputs(enter_bold_mode,1,putchar);
-    else tputs(exit_attribute_mode,0,putchar);
-#endif
-}
-
-/**
- * select a color.
- * @param num - 0 is black; 1 red; 2 green; 3 yellow; 4 blue; 5 magenta; 6 cyan; 7 white;
- */
-  
-#define RED 1
-#define WHITE 7
-
-void color(int num)
-{
-#ifdef HAVE_ISATTY
-    if(!isatty(fileno(stdout))) return;
-#endif
-#if defined(HAVE_TIGETSTR) && defined(HAVE_PUTP) && defined(HAVE_TPARM)
-    char *setf = tigetstr((char *)"setf");
-    if(!setf) setf = tigetstr((char *)"setaf");
-    if(setf){
-	putp(tparm(setf,num));
-    }
-#endif
-}
-
 
 void usage()
 {
@@ -168,12 +116,6 @@ void usage()
 #endif
     printf("\n");
 
-    if(opt_debug){
-	for(int i=0;i<9;i++){
-	    color(i);printf("Color %d\n",i);color(7);
-	}
-    }
-
     exit(0);
 }
 
@@ -183,7 +125,7 @@ AFFILE *af=0;
 void sig_info(int arg)
 {
     if(af==0) return;
-    printf("Validating %"I64d" of %"I64d"\n", af->pos,af->image_size);
+    printf("Validating %" I64d" of %" I64d"\n", af->pos,af->image_size);
 }
 
 
@@ -412,7 +354,6 @@ void print_info(AFFILE *af,const char *segname)
     af_set_option(af,AF_OPTION_AUTO_DECRYPT,prev);    
 
     if(was_decrypted){
-	bold(1);
 	something_was_decrypted = true;	// print key at bottom
     }
 
@@ -421,7 +362,7 @@ void print_info(AFFILE *af,const char *segname)
     memset(output_line,0,sizeof(output_line));
 
     /* Now append the arg and the data len */
-    sprintf(output_line,"%-24s %8"PRIu32"   %8d   ",segname,arg,(int)data_len);
+    sprintf(output_line,"%-24s %8" PRIu32 "   %8d   ",segname,arg,(int)data_len);
 
     if(opt_no_preview){
 	printf("%s\n",output_line);
@@ -451,7 +392,7 @@ void print_info(AFFILE *af,const char *segname)
 	 */
 	switch(data_len){
 	case 8:
-	    printf("%s= %"I64d" (64-bit value)\n",
+	    printf("%s= %" I64d" (64-bit value)\n",
 		   output_line,af_decode_q(data));
 	    break;
 	case 0:
@@ -556,9 +497,6 @@ void print_info(AFFILE *af,const char *segname)
     putchar('\n');
  done:
     if(data) free(data);
-    bold(0);			// make sure bold is off
-
-    //color(WHITE);		// make sure we are back to normal color
 }
 
 
@@ -670,29 +608,27 @@ int info_file(const char *infile)
 
     /* Print the key */
     if(something_was_decrypted){
-	bold(1);
-	printf("Bold indicates segments that were decrypted.\n");
-	bold(0);
+	printf("Some segments were decrypted.\n");
     }
 
 
     printf("\n");
-    printf("Total segments:        %8"PRIu32"   (%"PRIu32" real)\n", total_segs,(total_segs-total_nulls));
+    printf("Total segments:        %8" PRIu32 "   (%" PRIu32" real)\n", total_segs,(total_segs-total_nulls));
     if(aes_segs){
 	printf("  Encrypted segments:  %8u\n",aes_segs);
     }
-    printf("  Page  segments:      %8"PRIu32"\n",total_pages);
-    printf("  Hash  segments:      %8"PRIu32"\n",total_hashes);
-    printf("  Signature segments:  %8"PRIu32"\n",total_signatures);
-    printf("  Null segments:       %8"PRIu32"\n",total_nulls);
+    printf("  Page  segments:      %8" PRIu32 "\n",total_pages);
+    printf("  Hash  segments:      %8" PRIu32 "\n",total_hashes);
+    printf("  Signature segments:  %8" PRIu32 "\n",total_signatures);
+    printf("  Null segments:       %8" PRIu32 "\n",total_nulls);
     if(opt_all){
-	printf("  Empty segments:      %8"PRIu32"\n",total_nulls);
+	printf("  Empty segments:      %8" PRIu32 "\n",total_nulls);
 	printf("\n");
-	printf("Total data bytes in segments: %"I64d"\n",total_datalen);
+	printf("Total data bytes in segments: %" I64d"\n",total_datalen);
 
 	printf("Total space in file dedicated to segment names: %zd\n",
 	       total_segname_len);
-	printf("Total overhead for %"PRIu32" segments: %zd bytes (%"PRIu32"*(%zd+%zd))\n",
+	printf("Total overhead for %" PRIu32 " segments: %zd bytes (%" PRIu32 "*(%zd+%zd))\n",
 	       total_segs,
 	       (size_t) total_segs*(sizeof(struct af_segment_head) +sizeof(struct af_segment_tail)),
 	       total_segs,
@@ -724,7 +660,7 @@ int info_file(const char *infile)
 	//printf("device_bytes=%"I64d"\n",device_bytes);
 	//printf("device_pages=%"I64d"\n",device_pages);
 	if(missing_pages!=0){
-	    printf("Missing page segments: %8"I64u"\n",missing_pages);
+	    printf("Missing page segments: %8" I64u"\n",missing_pages);
 	}
 	else {
 	    some_missing_pages=0;
@@ -739,7 +675,7 @@ int info_file(const char *infile)
 
     if(some_missing_pages && opt_debug){
 	printf("Cannot calculate missing pages\n");
-	printf("  device_sectors=%"I64d" image_pagesize=%"PRIu32" sectorsize=%"PRIu32"\n",
+	printf("  device_sectors=%" I64d" image_pagesize=%" PRIu32 " sectorsize=%" PRIu32 "\n",
 	       device_sectors,af->image_pagesize,af->image_sectorsize);
     }
     af_close(af);
@@ -760,8 +696,8 @@ void figure_media(const char *fn)
     printf("<!DOCTYPE Server >\n");
     printf("<device name='%s'>\n",fn);
     printf("   <sector_size>%d</sector_size>\n",afb.sector_size);
-    printf("   <total_sectors>%"PRId64"</total_sectors>\n",afb.total_sectors);
-    printf("   <max_read_blocks>%"PRIu64"</max_read_blocks>\n",afb.max_read_blocks);
+    printf("   <total_sectors>%" PRId64 "</total_sectors>\n",afb.total_sectors);
+    printf("   <max_read_blocks>%" PRIu64 "</max_read_blocks>\n",afb.max_read_blocks);
     printf("</device>\n");
     close(fd);
 }
@@ -770,16 +706,6 @@ int main(int argc,char **argv)
 {
     int ch;
     const char *infile;
-
-    /* Figure out how many cols the screen has... */
-#ifdef HAVE_LIBNCURSES
-    term = getenv("TERM");
-    if(term){
-	setupterm((char *)0,1,(int *)0);
-	start_color();
-	cols = tgetnum((char *)"co");
-    }
-#endif
 
     while ((ch = getopt(argc, argv, "abh?s:SmiIwj:p:xvVX5dAl")) != -1) {
 	switch (ch) {

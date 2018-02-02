@@ -22,15 +22,6 @@
 #include "unix4win32.h"
 #endif
 
-#ifdef HAVE_CURSES_H
-#include <curses.h>
-#endif
-
-#ifdef HAVE_TERM_H
-#include <term.h>
-#endif
-
-
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
@@ -83,7 +74,8 @@ void usage()
     printf("\n");
     printf("usage:   %s [options] file1 [... files] \n",progname);
     printf("\n");
-    printf("examples:\n");
+    printf("Please, see more info in manpage.");
+/*    printf("examples:\n");
     printf("  %s file1.iso --- convert file1.iso to file1.aff\n",progname);
     printf("  %s file1.iso file2.iso file3.iso...  --- batch convert files\n",progname);
     printf("  %s -r -e iso image.aff --- convert image.aff to image.iso\n",progname);
@@ -116,6 +108,7 @@ void usage()
     printf("      -Z       -- Do not automatically probe for gzip/bzip2 compression.\n");
     printf("      -y       -- Always answer yes/no questions 'yes.'\n");
     printf("      -V = Just print the version number and exit.\n");
+*/
     printf("\n");
     exit(0);
 }
@@ -421,15 +414,15 @@ int convert(const char *infile,char *outfile)
 	    
 	    int64_t pagenum = *i;
 	    
-	    if(!opt_quiet) printf("Converting page %"I64d" of %"I64d"\r",pagenum,highest_pagenum);fflush(stdout);
+	    if(!opt_quiet) { printf("Converting page %" I64d " of %" I64d "\r",pagenum,highest_pagenum); fflush(stdout); }
 	    
 	    size_t data_len = image_pagesize;
 	    if(af_get_page(a_in,pagenum,data,&data_len)){
-		err(1,"af_get_page(file=%s,page=%"I64d")",
+		err(1,"af_get_page(file=%s,page=%" I64d ")",
 		    af_filename(a_in),pagenum);
 	    }
 	    if(af_update_page(a_out,pagenum,data,data_len)){
-		err(1,"af_update_page(file=%s,page=%"I64d")",
+		err(1,"af_update_page(file=%s,page=%" I64d ")",
 		    af_filename(a_out),pagenum);
 	    }
 	    
@@ -446,7 +439,7 @@ int convert(const char *infile,char *outfile)
 	/* Go back and update the image size (necessary since I have been writing page-by-page) */
 	if(af_update_segq(a_out,AF_IMAGESIZE,last_byte_in_image)
 	   && errno!=ENOTSUP){
-	    err(1,"Could not upate AF_IMAGESIZE");
+	    err(1,"Could not update AF_IMAGESIZE");
 	}
     } else {
 	/* No page support; Copy from beginning to end */
@@ -497,10 +490,10 @@ int convert(const char *infile,char *outfile)
 
     /* Finish the hash calculations and write to the db */
     if(!opt_quiet){
-	printf("bytes converted: %"I64d" \n",total_bytes_converted);
+	printf("bytes converted: %" I64d " \n",total_bytes_converted);
 	/* If the vnode implementation tracked segments written, report it. */
 	if(a_out->pages_written || a_out->pages_compressed){
-	    printf("Total pages: %"I64u"  (%"I64u" compressed)\n",
+	    printf("Total pages: %" I64u "  (%" I64u " compressed)\n",
 		   a_out->pages_written,a_out->pages_compressed);
 	}
     }
@@ -550,7 +543,7 @@ int convert(const char *infile,char *outfile)
 int64_t atoi64(const char *buf)
 {
     int64_t r=0;
-    sscanf(buf,"%"I64d,&r);
+    sscanf(buf,"%" I64d,&r);
     return r;
 }
 
@@ -688,7 +681,7 @@ int main(int argc,char **argv)
 	 */
 	if(opt_outdir){
 	    cc = strrchr(outfile,'/');
-	    char filename[PATH_MAX];
+	    char filename[MAXPATHLEN];
 	    if(cc){
 		strlcpy(filename,cc+1,sizeof(filename));	// just the filename
 	    }

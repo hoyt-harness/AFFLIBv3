@@ -24,14 +24,6 @@
 #include <unistd.h>
 #endif
 
-#ifdef HAVE_TERM_H
-#include <term.h>
-#endif
-
-#ifdef HAVE_NCURSES_TERM_H
-#include <ncurses/term.h>
-#endif
-
 #ifdef WIN32
 #include "unix4win32.h"
 #include <malloc.h>
@@ -97,7 +89,7 @@ int fix(const char *infile)
     r = (*af->v->open)(af);
     /* See if we can build a TOC */
     if(r<0){
-	printf("AFF file corrupt at %"I64d" out of %"I64d" (%"I64d" bytes from end)\n",
+	printf("AFF file corrupt at %" I64d " out of %" I64d " (%" I64d " bytes from end)\n",
 	       ftello(af->aseg),(int64_t)len,len-ftello(af->aseg));
 	if(opt_fix){
 	    printf("Truncating... %d \n",fileno(af->aseg));
@@ -177,7 +169,7 @@ int fix(const char *infile)
 	if(fix_add_gid) {
 	    printf(" ... adding GID  ",infile);
 	    unsigned char bit128[16];
-	    RAND_pseudo_bytes(bit128,sizeof(bit128));
+	    RAND_bytes(bit128,sizeof(bit128));
 	    if(af_update_seg(af,AF_IMAGE_GID,0,bit128,sizeof(bit128))){
 		warn("Cannot write %s: ",AF_IMAGE_GID);
 	    }

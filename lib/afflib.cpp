@@ -357,6 +357,7 @@ AFFILE *af_open(const char *filename,int flags,int mode)
 {
     if(!aff_initialized) af_initialize();
     if(ends_with(filename,".E01") || ends_with(filename,".e01")){
+	errno = EINVAL;
 	return 0;
     }
 
@@ -376,7 +377,7 @@ AFFILE *af_open(const char *filename,int flags,int mode)
 	}
     }
     errno = EINVAL;
-    if(exists) errno = ENOENT;
+    if(exists && access(filename, R_OK) != 0) errno = ENOENT;
     return 0;				// can't figure it out; must be an invalid extension
 }
 
@@ -454,7 +455,7 @@ int af_close(AFFILE *af)
 uint64_t af_seek(AFFILE *af,int64_t pos,int whence)
 {
     AF_WRLOCK(af);
-    if(af_trace) fprintf(af_trace,"af_seek(%p,%"I64d",%d)\n",af,pos,whence);
+    if(af_trace) fprintf(af_trace,"af_seek(%p,%" I64d ",%d)\n",af,pos,whence);
     uint64_t new_pos=0;
     switch(whence){
     case SEEK_SET:
@@ -595,16 +596,8 @@ int af_make_badflag(AFFILE *af)
     if(af->badflag!=0) free(af->badflag);
     af->badflag = (unsigned char *)malloc(af->image_sectorsize); // current sector size
 
-#ifdef HAVE_RAND_pseudo_bytes
-    /* Use a good random number generator if we have it */
-    RAND_pseudo_bytes(af->badflag,af->image_sectorsize);
+    RAND_bytes(af->badflag,af->image_sectorsize);
     strcpy((char *)af->badflag,"BAD SECTOR");
-#else
-    /* Otherwise use a bad one */
-    for(uint32_t i=0;i<af->image_sectorsize;i++){
-      af->badflag[i] = rand() & 0xff;
-    }
-#endif
 
     AF_WRLOCK(af);
     af->badflag_set = 1;
@@ -631,7 +624,7 @@ int af_make_gid(AFFILE *af)
     AF_WRLOCK(af);
     if(af_get_seg(af,AF_IMAGE_GID,0,0,0)!=0){
 	unsigned char bit128[16];
-	RAND_pseudo_bytes(bit128,sizeof(bit128));
+	RAND_bytes(bit128,sizeof(bit128));
 	int r = af_update_seg(af,AF_IMAGE_GID,0,bit128,sizeof(bit128));
 	if(r<0) ret = -1;
 	else ret = 1;
@@ -795,7 +788,7 @@ int af_rewind_seg(AFFILE *af)
 int af_update_segf(AFFILE *af, const char *segname,
 		  uint32_t arg,const u_char *data,uint32_t datalen,uint32_t flag)
 {
-    if(af_trace) fprintf(af_trace,"af_update_segf(%p,segname=%s,arg=%"PRIu32",datalen=%d)\n",
+    if(af_trace) fprintf(af_trace,"af_update_segf(%p,segname=%s,arg=%" PRIu32 ",datalen=%d)\n",
 			 af,segname,arg,datalen);
     AF_WRLOCK(af);
     if(af->v->update_seg==0){
@@ -847,7 +840,7 @@ int af_update_segf(AFFILE *af, const char *segname,
     af->bytes_written += datalen;
 #ifdef HAVE_AES_ENCRYPT
     /* if we encrypted, make sure the unencrypted segment is deleted */
-    if(oldname) (*af->v->del_seg)(af,oldname);
+    if(oldname && af->v->del_seg) (*af->v->del_seg)(af,oldname);
     if(newdata){
 	free(newdata);		// free any allocated data
 	newdata = 0;
@@ -859,7 +852,7 @@ int af_update_segf(AFFILE *af, const char *segname,
     char encrypted_name[AF_MAX_NAME_LEN];
     strlcpy(encrypted_name,segname,sizeof(encrypted_name));
     strlcat(encrypted_name,AF_AES256_SUFFIX,sizeof(encrypted_name));
-    if(*af->v->del_seg) (*af->v->del_seg)(af,encrypted_name); // no need to check error return
+    if(af->v->del_seg) (*af->v->del_seg)(af,encrypted_name); // no need to check error return
 
 
     /* Sign the segment if:
@@ -961,13 +954,13 @@ void af_stats(AFFILE *af,FILE *f)
 {
     AF_READLOCK(af);
     fprintf(f,"AFSTATS for %s\n",af_filename(af));
-    fprintf(f,"Pages read: %"I64u"\n",af->pages_read);
-    fprintf(f,"Pages written: %"I64u"\n",af->pages_written);
-    fprintf(f,"Pages compressed: %"I64u"\n",af->pages_compressed);
-    fprintf(f,"Pages decompressed: %"I64u"\n",af->pages_decompressed);
-    fprintf(f,"Cache hits: %"I64u"\n",af->cache_hits);
-    fprintf(f,"Cache misses: %"I64u"\n",af->cache_misses);
-    fprintf(f,"Bytes copied: %"I64u"\n",af->bytes_memcpy);
+    fprintf(f,"Pages read: %" I64u "\n",af->pages_read);
+    fprintf(f,"Pages written: %" I64u "\n",af->pages_written);
+    fprintf(f,"Pages compressed: %" I64u "\n",af->pages_compressed);
+    fprintf(f,"Pages decompressed: %" I64u "\n",af->pages_decompressed);
+    fprintf(f,"Cache hits: %" I64u "\n",af->cache_hits);
+    fprintf(f,"Cache misses: %" I64u "\n",af->cache_misses);
+    fprintf(f,"Bytes copied: %" I64u "\n",af->bytes_memcpy);
     AF_UNLOCK(af);
 }
 

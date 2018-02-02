@@ -4,7 +4,7 @@
 # See http://autotoolset.sourceforge.net/tutorial.html
 # and http://www.openismus.com/documents/linux/automake/automake.shtml
 
-AC_INIT([AFFLIB],[3.7.4],[https://github.com/simsong/AFFLIBv3/issues])
+AC_INIT([AFFLIB],[3.7.16],[https://github.com/sshock/AFFLIBv3])
 AM_INIT_AUTOMAKE
 AM_MAINTAINER_MODE
 
@@ -28,17 +28,16 @@ AC_CONFIG_MACRO_DIR([m4])
 
 # We are now threading
 m4_include([m4/acx_pthread.m4])
-m4_include([m4/acinclude.m4])
 ACX_PTHREAD()
 
 if test x"${cross_compiling}" = "xno" ; then
   # Bring additional directories where things might be found into our
   # search path. I don't know why autoconf doesn't do this by default
-  for spfx in /usr/local /opt/local /sw ${prefix} ; do
+  for spfx in ${prefix} /sw /opt/local /usr/local ; do
     AC_MSG_NOTICE([checking ${spfx}/include])
     if test -d ${spfx}/include; then
-        CPPFLAGS="-I${spfx}/include $CPPFLAGS"
-        LDFLAGS="-L${spfx}/lib $LDFLAGS"
+        CPPFLAGS="$CPPFLAGS -I${spfx}/include"
+        LDFLAGS="$LDFLAGS -L${spfx}/lib"
         AC_MSG_NOTICE([ *** ADDING ${spfx}/include to CPPFLAGS *** ])
         AC_MSG_NOTICE([ *** ADDING ${spfx}/lib to LDFLAGS *** ])
     fi
@@ -81,7 +80,7 @@ AC_STRUCT_ST_RDEV
 
 
 # Specific headers that I plan to use
-AC_CHECK_HEADERS([arpa/inet.h assert.h ctype.h dmalloc.h err.h errno.h fcntl.h getopt.h inttypes.h linux/fs.h malloc.h ncurses/term.h netinet/in.h regex.h signal.h stdint.h stdio.h stdlib.h string.h sys/cdefs.h sys/disk.h sys/file.h sys/ioctl.h sys/ioctl.h sys/param.h sys/param.h sys/socket.h sys/signal.h sys/stat.h sys/time.h sys/types.h sys/vfs.h sysexits.h term.h time.h unistd.h zlib.h _mingw.h])
+AC_CHECK_HEADERS([arpa/inet.h assert.h ctype.h dmalloc.h err.h errno.h fcntl.h getopt.h inttypes.h linux/fs.h malloc.h netinet/in.h regex.h signal.h stdint.h stdio.h stdlib.h string.h sys/cdefs.h sys/disk.h sys/file.h sys/ioctl.h sys/ioctl.h sys/param.h sys/param.h sys/socket.h sys/signal.h sys/stat.h sys/time.h sys/types.h sys/vfs.h sysexits.h time.h unistd.h zlib.h _mingw.h])
 
 AC_CHECK_LIB([regex],[regcomp])        # see if we need -lregex
 
@@ -113,54 +112,57 @@ AC_LANG_POP([C++])
 ################################################################
 # For AFF tools
 AC_CHECK_HEADERS([readline/readline.h])
-AC_CHECK_HEADERS([curses.h termcap.h])
 AC_CHECK_LIB([readline],[readline],, AC_MSG_RESULT([readline not installed]))
-AC_CHECK_LIB([ncurses],[initscr],, AC_MSG_RESULT([ncurses not installed]))
 AC_CHECK_LIB([z],[uncompress],, AC_MSG_ERROR([zlib not installed; cannot continue. Try adding zlib-dev or zlib1g-dev.]))
 AC_CHECK_LIB([rt],[aio_error64])
-AC_SEARCH_LIBS(tgetent, termlib termcap tinfo curses ncurses)
-AC_CHECK_FUNCS(putp tputs tgoto tgetstr tgetnum gotorc beep endwin setupterm printw)
 
 ################################################################
 ## Expat
 ## Required for S3 and Digital Signatures
-##
-AC_ARG_WITH(expat,
-  AS_HELP_STRING([--with-expat=PATH], [where libexpat is compiled (if it isn't installed); required for S3 and Digital Signatures]),
-  [LDFLAGS="-L${with_expat} $LDFLAGS" ;
-   CPPFLAGS="-I${with_expat}/lib $CPPFLAGS"])
+AC_ARG_WITH([expat],
+  AS_HELP_STRING([--with-expat], [build with expat; required for S3 and Digital Signatures @<:@default=check@:>@]),
+  [], [with_expat=check])
 
-have_expat=yes
-AC_CHECK_HEADER([expat.h])
-AC_CHECK_LIB([expat],[XML_ParserCreate],,[have_expat="no ";AC_MSG_WARN([expat not found; S3 and Digital Signatures not enabled])])
-
+have_expat=no
+AS_IF([test "x$with_expat" != xno],
+  [AC_CHECK_HEADER([expat.h],
+    [AC_CHECK_LIB([expat], [XML_ParserCreate])])
+   have_expat=${ac_cv_lib_expat_XML_ParserCreate-no}
+   AS_IF([test "x$with_expat" != xcheck && test "x$have_expat" = xno],
+    [AC_MSG_FAILURE([--with-expat was given but test for expat failed])])])
 
 ################################################################
 ## LZMA (always enabled)
 AC_DEFINE(USE_LZMA, 1, [Enable LZMA compression])
 
+################################################################
+## curl
+## Required for S3
+AC_ARG_WITH([curl],
+  AS_HELP_STRING([--with-curl], [build with curl; required for S3 @<:@default=check@:>@]),
+  [], [with_curl=check])
+
+have_curl=no
+AS_IF([test "x$with_curl" != xno],
+  [AC_CHECK_HEADER([curl/curl.h],
+    [AC_CHECK_LIB([curl], [curl_global_init],,)],)
+   have_curl=${ac_cv_lib_curl_curl_global_init-no}
+   AS_IF([test "x$with_curl" != xcheck && test "x$have_curl" = xno],
+    [AC_MSG_FAILURE([--with-curl was given but test for curl failed])])])
 
 ################################################################
 ## Amazon S3
 ## S3 requires curl and expat; otherwise we don't need them
-AC_ARG_ENABLE(s3,
-	AC_HELP_STRING([--enable-s3=yes],
-          [Support for Amazon's S3 service. Requires CURL and Expat.]),
-          [enable_s3=$enableval], [enable_s3=no])
+AC_ARG_ENABLE([s3],
+  AC_HELP_STRING([--enable-s3], [Support for Amazon S3 service. Requires CURL and Expat. @<:@default=check@:>@]),
+    [enable_s3=$enableval], [enable_s3=check])
 
-if test "x${enable_s3}" = "xyes" ; then
-  AC_MSG_NOTICE([S3 support requested. Looking for curl and expat...])
-  AC_PATH_PROG(CURL_CONFIG,curl-config)
-  AC_ARG_WITH(curl,
-            AC_HELP_STRING([--with-curl=PATH], [where libcurl is installed; required for S3]),
-            [CURL_CONFIG="${with_curl}/bin/curl-config"])
-  AC_CHECK_HEADER([curl/curl.h],,
-    AC_MSG_WARN([curl/curl.h not found; Disabling S3 Support.])
-    enable_s3=no)
-  AC_CHECK_LIB([curl],[curl_global_init],,
-    AC_MSG_WARN([Curl library corrupt; Disabling S3 Support.])
-    enable_s3=no)
-fi
+AS_IF([test "x$enable_s3" != xno],
+  [AS_IF([test "x$have_expat" = xyes && test "x$have_curl" = xyes],
+    [enable_s3=yes],
+    [AS_IF([test "x$enable_s3" = xcheck],
+      [enable_s3=no],
+      [AC_MSG_FAILURE([--enable-s3 was given but required libraries are not found])])])])
 
 S3_BIN=
 if test "x${enable_s3}" = "xyes" ; then
@@ -199,13 +201,11 @@ AM_CONDITIONAL([MAYBE_QEMU],[test "x${enable_qemu}" = "xyes"])  # used by automa
 ### PyAFF
 ################################################################
 # python checks
-# (requires autoconf 1.5+ and the macros in acinclude.m4)
 AC_ARG_ENABLE([python],
 	AC_HELP_STRING([--enable-python=no], [Build python bindings (pyaff)]),
         [enable_python=$enableval], [enable_python=no])
 if test "${enable_python}" = "yes" ; then
-  AM_PATH_PYTHON([2.5])
-  AC_PYTHON_DEVEL()
+  AM_PATH_PYTHON()
   AC_DEFINE([HAVE_PYTHON],1,[Build Python bindings])
 fi
 
@@ -217,50 +217,50 @@ AM_CONDITIONAL(HAVE_PYTHON, test "$enable_python" = yes)
 ################################################################
 ################################################################
 ## Crypto (must follow S3)
-## Note: -lssl is needed on Linux
-##       -lcrypto is needed on MacOS
+## Note: -lcrypto is needed on Linux and MacOS
 ##       -lmd is needed on some older systems
-##       -lssl and -lcrypto are needed if using libressl
+##       TBD: is -lssl needed if using libressl?
 ## Always check for headers, then libs, then functions
 ###
 
 AC_CHECK_HEADERS([openssl/aes.h openssl/bio.h openssl/evp.h openssl/hmac.h openssl/md5.h openssl/rand.h openssl/rsa.h openssl/sha.h openssl/pem.h openssl/x509.h])
 
-AC_CHECK_LIB([crypto],[EVP_get_digestbyname])
-
-AC_CHECK_LIB([ssl],[SSL_library_init],,
+AC_CHECK_LIB([crypto],[EVP_get_digestbyname],,
 	AC_MSG_ERROR([OpenSSL developer library 'libssl-dev' or 'openssl-devel' not installed; cannot continue.]))
 
 AC_CHECK_LIB([md],[MD5])		# if libmd is available, get it
 
-AC_CHECK_FUNCS([MD5 SHA1 AES_encrypt RAND_pseudo_bytes des_read_pw_string EVP_read_pw_string EVP_MD_size])
+AC_CHECK_FUNCS([MD5 SHA1 AES_encrypt RAND_bytes des_read_pw_string EVP_read_pw_string EVP_MD_size])
 AC_CHECK_FUNCS([PEM_read_bio_RSA_PUBKEY])
 
 ################################################################
 ## FUSE: Filesystem in Userspace
 AC_ARG_ENABLE(fuse,
-	AC_HELP_STRING([--enable-fuse=yes],
-	       [Support for FUSE, Filesystem in Userspace. (default yes)]),
-               [enable_fuse=$enableval], [enable_fuse=yes])
-if test "x${enable_fuse}" = "xyes" ; then
-  AC_MSG_NOTICE([FUSE requested])
-  CPPFLAGS="-D_FILE_OFFSET_BITS=64 -DFUSE_USE_VERSION=26 $CPPFLAGS"
-  if test `uname -s` = Darwin ; then
-    AC_MSG_NOTICE([FUSE IS NOT SUPPORTED ON MACOS])
-    enable_fuse=no
-  fi
-  AC_CHECK_HEADER([fuse.h],,
-    AC_MSG_NOTICE([fuse.h not found; Disabling FUSE support.])
-    enable_fuse=no)
-  AC_SUBST(FUSE_LIBS)
-  AC_SUBST(FUSE_CFLAGS)
-fi
+  AC_HELP_STRING([--enable-fuse], [Support for FUSE, Filesystem in Userspace. @<:@default=check@:>@]),
+    [enable_fuse=$enableval], [enable_fuse=check])
+
+have_fuse=no
+AS_IF([test "x$enable_fuse" != xno],
+  [CPPFLAGS="-D_FILE_OFFSET_BITS=64 -DFUSE_USE_VERSION=26 $CPPFLAGS"
+   AC_CHECK_HEADER([fuse.h],
+    [AC_CHECK_LIB([fuse], [fuse_version],
+      [FUSE_LIBS=-lfuse
+       have_fuse=yes])])
+   AS_IF([test `uname -s` = Darwin && test "x$have_fuse" != "xyes"],
+    [m4_ifdef([PKG_CHECK_MODULES],
+      [PKG_CHECK_MODULES([FUSE], [fuse],
+        [have_fuse=yes],
+        [:])])])
+   AS_IF([test "x$enable_fuse" != xcheck && test "x$have_fuse" = xno],
+    [AC_MSG_FAILURE([--enable-fuse was given but test for fuse failed])])])
+enable_fuse=$have_fuse
+
 AFFUSE_BIN=
-if test "${enable_fuse}" = "yes"; then
-  AC_DEFINE([USE_FUSE],1,[Use FUSE to mount AFF images])
-  AFFUSE_BIN='affuse$(EXEEXT)'
-  FUSE_LIBS=-lfuse
-fi
+AS_IF([test "x${enable_fuse}" = "xyes"],
+  [AC_SUBST(FUSE_LIBS)
+   AC_SUBST(FUSE_CFLAGS)
+   AC_DEFINE([USE_FUSE],1,[Use FUSE to mount AFF images])
+   AFFUSE_BIN='affuse$(EXEEXT)'])
 AC_SUBST(AFFUSE_BIN)
 AM_PROG_CC_C_O			dnl for affuse
 ##

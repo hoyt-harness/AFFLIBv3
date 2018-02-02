@@ -38,6 +38,11 @@ const char *tempdir = "/tmp/";
 #define MIN(x,y) ((x)<(y)?(x):(y))
 #endif
 
+/* Support OpenSSL before 1.1.0 */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+#define EVP_MD_CTX_new EVP_MD_CTX_create
+#define EVP_MD_CTX_free EVP_MD_CTX_destroy
+#endif
 
 const char *filename(char *buf,int buflen,const char *base)
 {
@@ -233,13 +238,7 @@ int random_read_test(int total_bytes,int data_page_size)
     unsigned char *buf2 = (unsigned char *)malloc(total_bytes);
 
     /* First half is random */
-#ifdef HAVE_RAND_PSEUDO_BYTES
-    RAND_pseudo_bytes(buf,total_bytes/2);
-#else
-    for(int i=0;i<total_bytes/2;i++){
-	buf[i] = random();
-    }
-#endif
+    RAND_bytes(buf,total_bytes/2);
 
     /* Second half is a bit more predictable */
     for(int i=total_bytes/2;i<total_bytes;i++){
@@ -770,39 +769,50 @@ void rsatest()
     uint32_t  siglen = sizeof(sig);
 
     BIO *bp = BIO_new_file("signing_key.pem","r");
+    if (!bp) {
+      perror("BIO_new_file");
+      return;
+    }
 
-    EVP_MD_CTX md;
+    EVP_MD_CTX *md = EVP_MD_CTX_new();
     EVP_PKEY *pkey = PEM_read_bio_PrivateKey(bp,0,0,0);
 
-    EVP_SignInit(&md,sha256);
-    EVP_SignUpdate(&md,ptext,sizeof(ptext));
-    EVP_SignFinal(&md,sig,&siglen,pkey);
+    EVP_SignInit(md,sha256);
+    EVP_SignUpdate(md,ptext,sizeof(ptext));
+    EVP_SignFinal(md,sig,&siglen,pkey);
 
     /* let's try to verify it */
     bp = BIO_new_file("signing_cert.pem","r");
+    if (!bp) {
+      perror("BIO_new_file");
+      return;
+    }
+
     X509 *x = 0;
     PEM_read_bio_X509(bp,&x,0,0);
     EVP_PKEY *pubkey = X509_get_pubkey(x);
 
     printf("pubkey=%p\n",pubkey);
 
-    EVP_VerifyInit(&md,sha256);
-    EVP_VerifyUpdate(&md,ptext,sizeof(ptext));
-    int r = EVP_VerifyFinal(&md,sig,siglen,pubkey);
+    EVP_VerifyInit(md,sha256);
+    EVP_VerifyUpdate(md,ptext,sizeof(ptext));
+    int r = EVP_VerifyFinal(md,sig,siglen,pubkey);
     printf("r=%d\n",r);
 
     printf("do it again...\n");
-    EVP_VerifyInit(&md,sha256);
-    EVP_VerifyUpdate(&md,ptext,sizeof(ptext));
-    r = EVP_VerifyFinal(&md,sig,siglen,pubkey);
+    EVP_VerifyInit(md,sha256);
+    EVP_VerifyUpdate(md,ptext,sizeof(ptext));
+    r = EVP_VerifyFinal(md,sig,siglen,pubkey);
     printf("r=%d\n",r);
 
     printf("make a tiny change...\n");
     ptext[0]='f';
-    EVP_VerifyInit(&md,sha256);
-    EVP_VerifyUpdate(&md,ptext,sizeof(ptext));
-    r = EVP_VerifyFinal(&md,sig,siglen,pubkey);
+    EVP_VerifyInit(md,sha256);
+    EVP_VerifyUpdate(md,ptext,sizeof(ptext));
+    r = EVP_VerifyFinal(md,sig,siglen,pubkey);
     printf("r=%d\n",r);
+
+    EVP_MD_CTX_free(md);
 }
 
 void xmlseg(BIO *bp,AFFILE *af,const char *segname)

@@ -1,5 +1,5 @@
 /*
- * afstats.cpp:
+ * affstats.cpp:
  *
  * print specific statistics about one or more AFF files.
  * Ideally, we can get the stats from the metadata, but this program will
@@ -65,24 +65,12 @@
 #include <unistd.h>
 #endif
 
-#ifdef HAVE_TERM_H
-#include <term.h>
-#endif
-
-#ifdef HAVE_NCURSES_TERM_H
-#include <ncurses/term.h>
-#endif
-
-#ifdef HAVE_NCURSES_H
-#include <ncurses.h>
-#endif
-
 #ifdef WIN32
 #include "unix4win32.h"
 #include <malloc.h>
 #endif
 
-const char *progname = "afstats";
+const char *progname = "affstats";
 int  opt_m = 0;
 
 void usage()
@@ -106,15 +94,15 @@ void print_size(uint64_t s)
 	printf("%u",(unsigned int)(s/(1024*1024)));
 	return;
     }
-    printf("%"I64u,s);    
+    printf("%" I64u,s);    
 }
 
-void afstats_title()
+void affstats_title()
 {
     printf("Name\tAF_IMAGESIZE\tCompressed\tUncompressed\tBlank\tBad\n");
 }
 
-void afstats(const char *fname)
+void affstats(const char *fname)
 {
     AFFILE *af = af_open(fname,O_RDONLY,0);
     if(!af) af_err(1,"af_open(%s)",fname);
@@ -158,7 +146,7 @@ void afstats(const char *fname)
     print_size(compressed_bytes);
     printf("\t");
     print_size(uncompressed_bytes);
-    printf(" %"I64d" %"I64d,blanksectors,badsectors);
+    printf(" %" I64d " %" I64d,blanksectors,badsectors);
     putchar('\n');
     
     
@@ -193,9 +181,9 @@ int main(int argc,char **argv)
     }
 
     /* Each argument is now a file. Process each one */
-    afstats_title();
+    affstats_title();
     while(*argv){
-	afstats(*argv++);
+	affstats(*argv++);
 	argc--;
     }
     exit(0);

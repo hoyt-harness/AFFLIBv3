@@ -1,5 +1,5 @@
 /*
- * afcopy.cpp:
+ * affcopy.cpp:
  *
  * Copy one AFF file to another. 
  * Resulting file is re-ordered and possibly re-compressed.
@@ -39,19 +39,11 @@ using namespace aff;
 #include <unistd.h>
 #endif
 
-#ifdef HAVE_TERM_H
-#include <term.h>
-#endif
-
-#ifdef HAVE_NCURSES_TERM_H
-#include <ncurses/term.h>
-#endif
-
 #ifdef WIN32
 #include "unix4win32.h"
 #endif
 
-const char *progname = "afcopy";
+const char *progname = "affcopy";
 
 int opt_verbose = 0;
 int opt_debug = 0;
@@ -99,7 +91,7 @@ void usage()
     printf("   -k filename.key   = specify private key for signing\n");
     printf("   -c filename.cer   = specify a X.509 certificate that matches the private key\n");
     printf("                       (by default, the file is assumed to be the same one\n");
-    printf("                       provided with the -k option.)");
+    printf("                       provided with the -k option.)\n");
     printf("   -n  = read notes to accompany the copy from standard in.\n");
     printf("\n");
     printf("\nEncryption Options:");
@@ -297,7 +289,7 @@ int	isatty(int fd)
 }
 #endif
 
-int afcopy(char *infile,vector<string> &outfiles)
+int affcopy(char *infile,vector<string> &outfiles)
 {
 #ifdef SIGINFO
     signal(SIGINFO,sig_info);
@@ -375,7 +367,7 @@ int afcopy(char *infile,vector<string> &outfiles)
 	uint32_t arg=0;
 	if(af_get_seg(ain,segname,&arg,segbuf,&seglen)){
 	    unlink_outfiles(outfiles);	// failure; unlink the output files
-	    err(1,"Cannot read segment '%s' in %s. Deleteing output file", segname,af_filename(ain));
+	    err(1,"Cannot read segment '%s' in %s. Deleting output file", segname,af_filename(ain));
 	}
 
 	/* Calculate the MD5 of this segment and remember it in the map */
@@ -398,7 +390,9 @@ int afcopy(char *infile,vector<string> &outfiles)
 
 	    u_char seghash[32]; /* resultant message digest; could be any size */
 	    unsigned int seghash_len = sizeof(seghash); /* big enough to hold SHA256 */
+#ifdef USE_AFFSIGS
 	    int sigmode = AF_SIGNATURE_MODE0;
+#endif
 
 	    memset(seghash,0,sizeof(seghash));
 
@@ -409,7 +403,9 @@ int afcopy(char *infile,vector<string> &outfiles)
 		if(copy_page(ain,aout->af,pagenumber,arg,seghash,&seghash_len)==0){
 		    preened_pages.push_back(pagenumber); // preened pages won't be verified by md5
 		    if(opt_debug && opt_preen) printf(" (PREENED) ");
+#ifdef USE_AFFSIGS
 		    sigmode = AF_SIGNATURE_MODE1;
+#endif
 		    copied = true;
 		}
 	    }
@@ -469,7 +465,7 @@ int afcopy(char *infile,vector<string> &outfiles)
 	AFFILE *af = afouts.begin()->af;
 	uint64_t w = af->bytes_written;
 	double sec = ((t1.tv_sec-t0.tv_sec)+(t1.tv_usec-t0.tv_usec)/1000000.0);
-	printf("%s: %"I64d" bytes transfered in %.2f seconds. xfer rate: %.2f MBytes/sec\n",
+	printf("%s: %" I64d " bytes transferred in %.2f seconds. xfer rate: %.2f MBytes/sec\n",
 	       af_filename(af),w,sec,(w/1000000.0) / sec);
     }
 	
@@ -643,7 +639,7 @@ int main(int argc,char **argv)
 	
 	vector<string> outfiles;
 	outfiles.push_back(argv[1]);
-	return afcopy(argv[0],outfiles);
+	return affcopy(argv[0],outfiles);
     }
 
     /* Loop for each file and each directory */
@@ -664,7 +660,7 @@ int main(int argc,char **argv)
 	    outfilename.append(name);
 	    outfiles.push_back(outfilename);
 	}
-	afcopy(argv[0],outfiles);	   // old outfiles will get GCed
+	affcopy(argv[0],outfiles);	   // old outfiles will get GCed
 	argv++;
     }
     exit(0);
